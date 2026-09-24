@@ -65,7 +65,7 @@ class JsonSchemaTransformer(ABC):
         self.prefer_inlined_defs = prefer_inlined_defs
         self.simplify_nullable_unions = simplify_nullable_unions
 
-        self.defs: dict[str, JsonSchema] = deepcopy(self.schema.get('$defs', {}))
+        self.defs: dict[str, _JsonSchemaNode] = deepcopy(self.schema.get('$defs', {}))
         self.refs_stack: list[str] = []
         self.recursive_refs = set[str]()
         self._walked_defs: dict[str, JsonSchema] = {}
@@ -161,6 +161,10 @@ class JsonSchemaTransformer(ABC):
         def_schema = self.defs.get(key)
         if def_schema is None:  # pragma: no cover
             raise UserError(f'Could not find $ref definition for {key}')
+        if isinstance(def_schema, bool):
+            # Boolean schemas are valid JSON Schema (draft 2020-12, section 4.3.2):
+            # `true` is `{}`, `false` is `{"not": {}}`.
+            def_schema = {} if def_schema else {'not': {}}
 
         self.refs_stack.append(key)
         walked = self._handle({**deepcopy(def_schema), **siblings})
