@@ -585,7 +585,12 @@ class OpenAIJsonSchemaTransformer(JsonSchemaTransformer):
         if self.root_ref is not None:
             result.pop('$ref', None)  # We replace references to the self.root_ref with just '#' in the transform method
             root_key = re.sub(r'^#/\$defs/', '', self.root_ref)
-            result.update(self.defs.get(root_key) or {})
+            root_def = self.defs.get(root_key)
+            if isinstance(root_def, bool):
+                # Boolean schemas are valid JSON Schema (draft 2020-12, section 4.3.2):
+                # `true` is `{}`, `false` is `{"not": {}}`.
+                root_def = {} if root_def else {'not': {}}
+            result.update(root_def or {})
 
         return result
 
